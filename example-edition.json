@@ -1,0 +1,68 @@
+{
+  "title": "The Morning Roll",
+  "subtitle": "News, notes, and a slower morning",
+  "theme": { "dither": true },
+  "components": [
+    { "type": "section", "title": "Football" },
+    {
+      "type": "article",
+      "title": "Your daily football briefing",
+      "description": "A compact summary of the stories worth reading today.",
+      "source": "Sports desk",
+      "author": "The Morning Roll",
+      "score": 42,
+      "commentCount": 2,
+      "comments": [
+        {
+          "author": "A reader",
+          "text": "A good morning starts with football.",
+          "replies": [{ "author": "Another reader", "text": "And coffee." }]
+        }
+      ]
+    },
+    { "type": "headline", "text": "Around the house", "size": "small" },
+    { "type": "text", "text": "A few small things for today." },
+    {
+      "type": "list",
+      "items": [
+        {
+          "text": "Make breakfast",
+          "checkbox": true,
+          "checked": false,
+          "items": [
+            { "text": "Brew coffee", "checkbox": true, "checked": true },
+            { "text": "Toast bread", "checkbox": true }
+          ]
+        },
+        { "text": "Read the paper", "checkbox": true },
+        {
+          "text": "Pick a story to follow",
+          "ordered": true,
+          "items": ["Team news", "League news"]
+        }
+      ]
+    },
+    { "type": "divider", "style": "dashed" },
+    {
+      "type": "keyValue",
+      "items": [
+        { "label": "Edition", "value": "Home" },
+        { "label": "Printing", "value": "576 dots wide" }
+      ]
+    },
+    {
+      "type": "chessboard",
+      "title": "Daily chess puzzle",
+      "fen": "7k/8/5KQ1/8/8/8/8/8 w - - 0 1",
+      "orientation": "white",
+      "prompt": "White to move. Mate in one.",
+      "caption": "Find the winning move before your coffee gets cold."
+    },
+    { "type": "metadata", "source": "The workbench" },
+    {
+      "type": "comments",
+      "items": [{ "author": "Editor", "text": "See you tomorrow." }]
+    },
+    { "type": "qr", "url": "https://www.reddit.com/r/patriots/", "label": "Visit r/patriots" }
+  ]
+}

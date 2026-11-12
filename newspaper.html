@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Morning Roll</title>
+    <style>
+      * { box-sizing: border-box; }
+      html { background: white; color: black; }
+      body {
+        width: 576px;
+        margin: 0;
+        padding: 24px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 26px;
+        line-height: 1.4;
+      }
+      header { text-align: center; border-bottom: 4px double black; padding-bottom: 16px; }
+      .edition { font: bold 18px/1.4 sans-serif; text-transform: uppercase; letter-spacing: 2px; }
+      h1 { margin: 8px 0; font-size: 48px; line-height: 1.05; }
+      h2 { margin: 0 0 12px; font-size: 36px; line-height: 1.15; }
+      p { margin: 0 0 16px; }
+      section { padding: 22px 0; border-bottom: 2px solid black; }
+      .label { margin-bottom: 10px; font: bold 18px/1.4 sans-serif; text-transform: uppercase; letter-spacing: 2px; }
+      .lead { font-size: 30px; font-weight: bold; }
+      svg { display: block; width: 100%; height: auto; margin: 18px 0; }
+      ul { margin: 0; padding-left: 30px; }
+      li + li { margin-top: 8px; }
+      footer { padding-top: 18px; text-align: center; font: bold 18px/1.4 sans-serif; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="edition">The home edition · No. 001</div>
+      <h1>The Morning Roll</h1>
+      <div>Fresh ink. Well, fresh heat.</div>
+    </header>
+    <main>
+      <section>
+        <p class="label">Front page</p>
+        <h2>A tiny computer.<br />A daily newspaper.</h2>
+        <p class="lead">The first edition starts right here.</p>
+        <p>A Raspberry Pi and a thermal printer are teaming up to bring the morning off the screen and onto paper.</p>
+        <svg viewBox="0 0 528 180" role="img" aria-label="A rising sun above hills">
+          <g fill="none" stroke="black" stroke-width="5">
+            <path d="M24 135H504" />
+            <path d="M194 135a70 70 0 0 1 140 0" />
+            <path d="M264 25V7M190 47l-14-14M338 47l14-14M162 100h-22M366 100h22" />
+            <path d="m24 169 90-64 80 64 80-38 85 38 75-56 70 56" />
+          </g>
+        </svg>
+        <p>No tabs. No notifications. Just a little roll of things worth reading.</p>
+      </section>
+      <section>
+        <p class="label">On the workbench</p>
+        <h2>From HTML to paper</h2>
+        <ul>
+          <li>Lay out this page at 576 pixels wide.</li>
+          <li>Capture it with a headless browser.</li>
+          <li>Convert the image to black and white.</li>
+          <li>Print it over USB.</li>
+        </ul>
+      </section>
+      <section>
+        <p class="label">The small print</p>
+        <h2>Made for slow mornings</h2>
+        <p>Pour the coffee. Find a sunny chair. Give your morning a beginning that does not involve scrolling.</p>
+      </section>
+    </main>
+    <footer>End of edition · See you tomorrow</footer>
+  </body>
+</html>

@@ -27,6 +27,10 @@ coverage/
 *.log
 *.sqlite
 *.sqlite3
+edition.png
+edition.escpos
+newspaper.png
+newspaper.escpos
 .DS_Store
 .idea/
 .vscode/

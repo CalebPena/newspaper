@@ -1,0 +1,11 @@
+Flask>=3.1,<4
+a2wsgi>=1.10,<2
+SQLAlchemy>=2.0,<3
+psycopg[binary]>=3.2,<4
+boto3>=1.35,<2
+mcp>=2,<3
+pydantic>=2.12,<3
+starlette>=0.48,<2
+uvicorn>=0.34,<1
+Pillow>=11.1,<13
+chess>=1.11,<2
