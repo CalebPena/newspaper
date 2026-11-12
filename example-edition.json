@@ -3,6 +3,41 @@
   "subtitle": "News, notes, and a slower morning",
   "theme": { "dither": true },
   "components": [
+    {
+      "type": "sportsScores",
+      "title": "Scoreboard",
+      "games": [
+        {
+          "league": "NBA",
+          "status": "final",
+          "detail": "November 11, 2026",
+          "away": { "name": "Boston Celtics", "score": 98 },
+          "home": { "name": "Toronto Raptors", "score": 93 }
+        },
+        {
+          "league": "NFL",
+          "status": "scheduled",
+          "detail": "November 15 | 7:30 AM MT",
+          "away": { "name": "New England Patriots" },
+          "home": { "name": "Detroit Lions" },
+          "note": "Munich, Germany"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Morning checklist",
+      "columns": [
+        { "label": "Task", "width": 2 },
+        { "label": "Min", "width": 1, "align": "right" },
+        { "label": "Note", "width": 2 }
+      ],
+      "rows": [
+        ["Coffee", 5, "Brew a fresh cup"],
+        ["Read", 10, "Catch up on the morning news"],
+        ["Chess", 3, "Solve today's puzzle"]
+      ]
+    },
     { "type": "section", "title": "Football" },
     {
       "type": "article",

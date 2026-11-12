@@ -17,6 +17,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from PIL import Image
+
 from components import NewspaperRenderer, save_receipt
 
 VERSION = "0.1.0"
@@ -148,6 +150,12 @@ def printer_ready(device):
 
 
 def send_receipt(device, receipt):
+    feed_and_cut = b"\x1bd\x03\x1dVB\x00"
+    payload_size = receipt.stat().st_size - len(feed_and_cut)
+    with receipt.open("rb") as stream:
+        stream.seek(payload_size)
+        if stream.read() != feed_and_cut:
+            raise WorkerError("Receipt does not end with the expected feed-and-cut command")
     descriptor = os.open(device, os.O_WRONLY | os.O_NONBLOCK | os.O_NOCTTY)
     try:
         if not stat.S_ISCHR(os.fstat(descriptor).st_mode):
@@ -156,24 +164,42 @@ def send_receipt(device, receipt):
         poller = select.poll()
         poller.register(descriptor, select.POLLOUT | select.POLLERR | select.POLLHUP)
         deadline = time.monotonic() + 120
+
+        def drain():
+            while time.monotonic() < deadline:
+                events = poller.poll(1000)
+                if not events:
+                    continue
+                if events[0][1] & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+                    raise WorkerError("Printer disconnected or reported a write error")
+                if events[0][1] & select.POLLOUT:
+                    return
+            raise WorkerError("Printer transfer exceeded two minutes")
+
+        def write(data):
+            remaining = memoryview(data)
+            while remaining:
+                drain()
+                try:
+                    count = os.write(descriptor, remaining)
+                except BlockingIOError:
+                    continue
+                if count == 0:
+                    raise WorkerError("Printer accepted no data")
+                remaining = remaining[count:]
+
         with receipt.open("rb") as stream:
-            while chunk := stream.read(4096):
-                remaining = memoryview(chunk)
-                while remaining:
-                    if time.monotonic() >= deadline:
-                        raise WorkerError("Printer write exceeded two minutes")
-                    events = poller.poll(1000)
-                    if not events:
-                        continue
-                    if events[0][1] & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
-                        raise WorkerError("Printer disconnected or reported a write error")
-                    try:
-                        count = os.write(descriptor, remaining)
-                    except BlockingIOError:
-                        continue
-                    if count == 0:
-                        raise WorkerError("Printer accepted no data")
-                    remaining = remaining[count:]
+            remaining_bytes = payload_size
+            while remaining_bytes:
+                chunk = stream.read(min(4096, remaining_bytes))
+                if not chunk:
+                    raise WorkerError("Receipt ended before the image was fully read")
+                write(chunk)
+                remaining_bytes -= len(chunk)
+        drain()
+        time.sleep(2)
+        write(feed_and_cut)
+        drain()
     finally:
         os.close(descriptor)
 
@@ -223,6 +249,7 @@ class Worker:
         image = renderer.render(document)
         if image.width != 576 or image.height > 16000:
             raise WorkerError("Edition exceeds the 576-dot width or two-meter paper limit")
+        image = image.transpose(Image.Transpose.ROTATE_180)
         receipt = directory / "edition.escpos"
         save_receipt(image, receipt)
         self.api.update(job["id"], job["claimToken"], "renew")

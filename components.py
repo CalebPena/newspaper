@@ -49,7 +49,7 @@ class NewspaperRenderer:
         return self.fonts[key]
 
     def text_image(self, text, width, size=None, bold=False, align="left"):
-        if width < self.theme["bodySize"] * 2:
+        if width < (size or self.theme["bodySize"]) * 2:
             raise ValueError("Nesting leaves too little room for text")
         font = self.font(size or self.theme["bodySize"], bold)
         measure = ImageDraw.Draw(Image.new("L", (1, 1)))
@@ -73,7 +73,8 @@ class NewspaperRenderer:
         result = Image.new("L", (width, max(1, len(lines)) * step), 255)
         draw = ImageDraw.Draw(result)
         for index, line in enumerate(lines):
-            x = (width - draw.textlength(line, font=font)) / 2 if align == "center" else 0
+            length = draw.textlength(line, font=font)
+            x = {"left": 0, "center": (width - length) / 2, "right": width - length}[align]
             draw.text((x, index * step), line, font=font, fill=0, anchor="lt")
         return result
 
@@ -137,6 +138,77 @@ class NewspaperRenderer:
         self.add(image)
         if config.get("caption"):
             self.text(config["caption"], size=self.theme["smallSize"])
+
+    def table_image(self, columns, rows, header=True, bold_rows=()):
+        columns = [{"label": column} if isinstance(column, str) else column for column in columns]
+        if not 1 <= len(columns) <= 6:
+            raise ValueError("Tables need between one and six columns")
+        available = self.width - 2 * self.margin
+        weights = [column.get("width", 1) for column in columns]
+        if any(weight <= 0 for weight in weights):
+            raise ValueError("Column widths must be positive relative weights")
+        edges = [round(available * sum(weights[:index]) / sum(weights)) for index in range(len(columns) + 1)]
+        padding = 6
+        parts = []
+
+        def row_image(cells, bold=False):
+            if len(cells) != len(columns):
+                raise ValueError("Each table row must match the number of columns")
+            rendered = [
+                self.text_image(
+                    "—" if value is None else str(value),
+                    edges[index + 1] - edges[index] - 2 * padding,
+                    size=self.theme["smallSize"], bold=bold,
+                    align=columns[index].get("align", "left"),
+                )
+                for index, value in enumerate(cells)
+            ]
+            image = Image.new("L", (available, max(cell.height for cell in rendered) + 2 * padding), 255)
+            for index, cell in enumerate(rendered):
+                image.paste(cell, (edges[index] + padding, padding))
+            ImageDraw.Draw(image).line((0, image.height - 1, available - 1, image.height - 1), fill=0, width=2 if bold else 1)
+            return image
+
+        if header:
+            parts.append(row_image([column["label"] for column in columns], bold=True))
+        for index, row in enumerate(rows):
+            parts.append(row_image(row, bold=index in bold_rows))
+        image = Image.new("L", (available, max(1, sum(part.height for part in parts))), 255)
+        top = 0
+        for part in parts:
+            image.paste(part, (0, top))
+            top += part.height
+        return image
+
+    def table(self, config):
+        if config.get("title"):
+            self.text(config["title"], size=self.theme["headingSize"], bold=True)
+        self.add(self.table_image(config["columns"], config["rows"]))
+        if config.get("caption"):
+            self.text(config["caption"], size=self.theme["smallSize"])
+
+    def sports_scores(self, config):
+        if config.get("title"):
+            self.text(config["title"], size=self.theme["headingSize"], bold=True)
+        labels = {"final": "FINAL", "live": "LIVE", "scheduled": "UPCOMING", "postponed": "POSTPONED"}
+        for game in config["games"]:
+            status = game.get("status", "final")
+            label = " | ".join(str(value) for value in (game.get("league"), labels[status], game.get("detail")) if value)
+            self.text(label, size=self.theme["smallSize"], bold=True)
+            teams = [game["away"], game["home"]]
+            scores = [team.get("score") for team in teams]
+            if status == "final" and any(score is None for score in scores):
+                raise ValueError("Final games need both scores")
+            winners = []
+            if status == "final" and scores[0] != scores[1]:
+                winners = [0 if scores[0] > scores[1] else 1]
+            rows = [[team["name"], team.get("score")] for team in teams]
+            self.add(self.table_image(
+                [{"label": "Team", "width": 4}, {"label": "Score", "width": 1, "align": "right"}],
+                rows, header=False, bold_rows=winners,
+            ))
+            if game.get("note"):
+                self.text(game["note"], size=self.theme["smallSize"])
 
     def qr(self, config):
         code = qrcode.QRCode(border=4, box_size=1)
@@ -248,6 +320,10 @@ class NewspaperRenderer:
                 self.text(f"{item['label']}: {item['value']}")
         elif kind == "image":
             self.picture(config)
+        elif kind == "table":
+            self.table(config)
+        elif kind == "sportsScores":
+            self.sports_scores(config)
         elif kind == "qr":
             self.qr(config)
         elif kind == "chessboard":
@@ -305,7 +381,7 @@ def save_receipt(image, path):
             strip = image.crop((0, top, image.width, min(top + 256, image.height)))
             output.write(b"\x1dv0\x00" + struct.pack("<HH", image.width // 8, strip.height))
             output.write(bytes(value ^ 255 for value in strip.tobytes()))
-        output.write(b"\x1bd\x06\x1dV\x01")
+        output.write(b"\x1bd\x03\x1dVB\x00")
 
 
 def main():

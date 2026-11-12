@@ -97,6 +97,58 @@ class KeyValue(Model):
     items: list[KeyValueItem] = Field(max_length=100)
 
 
+class TableColumn(Model):
+    label: ShortText
+    align: Literal["left", "center", "right"] = "left"
+    width: float = Field(default=1, gt=0, le=20, allow_inf_nan=False)
+
+
+Cell = Annotated[str, Field(max_length=1000)] | int | Annotated[float, Field(allow_inf_nan=False)] | None
+
+
+class Table(Model):
+    type: Literal["table"]
+    title: ShortText | None = None
+    columns: list[TableColumn | ShortText] = Field(min_length=1, max_length=6)
+    rows: list[list[Cell]] = Field(min_length=1, max_length=100)
+    caption: ShortText | None = None
+
+    @model_validator(mode="after")
+    def matching_rows(self):
+        if any(len(row) != len(self.columns) for row in self.rows):
+            raise ValueError("Each table row must match the number of columns")
+        weights = [column.width if isinstance(column, TableColumn) else 1 for column in self.columns]
+        if any(528 * weight / sum(weights) < 52 for weight in weights):
+            raise ValueError("Table columns are too narrow; use more balanced widths")
+        return self
+
+
+class ScoreTeam(Model):
+    name: str = Field(min_length=1, max_length=100)
+    score: int | None = Field(default=None, ge=0, le=999)
+
+
+class ScoreGame(Model):
+    league: ShortText | None = None
+    status: Literal["final", "live", "scheduled", "postponed"] = "final"
+    detail: ShortText | None = None
+    away: ScoreTeam
+    home: ScoreTeam
+    note: ShortText | None = None
+
+    @model_validator(mode="after")
+    def final_scores(self):
+        if self.status == "final" and (self.away.score is None or self.home.score is None):
+            raise ValueError("Final games need both scores")
+        return self
+
+
+class SportsScores(Model):
+    type: Literal["sportsScores"]
+    title: ShortText | None = None
+    games: list[ScoreGame] = Field(min_length=1, max_length=30)
+
+
 class ImageComponent(ImageFields):
     type: Literal["image"]
 
@@ -167,7 +219,7 @@ class Article(Metadata):
 
 Component = Annotated[
     Masthead | Section | Headline | Paragraph | MetadataComponent | Comments | ListComponent
-    | KeyValue | ImageComponent | QR | Divider | Chessboard | Article,
+    | KeyValue | Table | SportsScores | ImageComponent | QR | Divider | Chessboard | Article,
     Field(discriminator="type"),
 ]
 Article.model_rebuild()
@@ -190,6 +242,21 @@ class Document(Model):
     subtitle: ShortText | None = None
     theme: Theme = Field(default_factory=Theme)
     components: list[Component] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def table_layout(self):
+        def visit(components):
+            for component in components:
+                if isinstance(component, Table):
+                    weights = [column.width if isinstance(column, TableColumn) else 1 for column in component.columns]
+                    edges = [round(528 * sum(weights[:index]) / sum(weights)) for index in range(len(weights) + 1)]
+                    if any(edges[index + 1] - edges[index] - 12 < 2 * self.theme.smallSize for index in range(len(weights))):
+                        raise ValueError("Table columns are too narrow for theme.smallSize")
+                elif isinstance(component, Article):
+                    visit(component.components)
+
+        visit(self.components)
+        return self
 
     @model_validator(mode="before")
     @classmethod

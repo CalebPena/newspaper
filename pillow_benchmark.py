@@ -66,7 +66,7 @@ def main():
             strip = image.crop((0, top, 576, min(top + 256, image.height)))
             stream.write(b"\x1dv0\x00" + struct.pack("<HH", 72, strip.height))
             stream.write(bytes(byte ^ 255 for byte in strip.tobytes()))
-        stream.write(b"\x1bd\x06\x1dV\x01")
+        stream.write(b"\x1bd\x03\x1dVB\x00")
     print(f"Image generation and PNG save: {rendered - started:.3f} seconds")
     print(f"Total including ESC/POS conversion: {time.perf_counter() - started:.3f} seconds")
     print(f"Image size: {image.width} x {image.height}")

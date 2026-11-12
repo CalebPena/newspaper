@@ -35,7 +35,7 @@ def encode_receipt(screenshot, output):
             raster = bytes(byte ^ 255 for byte in strip.tobytes())
             receipt.write(b"\x1dv0\x00" + struct.pack("<HH", image.width // 8, strip.height))
             receipt.write(raster)
-        receipt.write(b"\x1bd\x06\x1dV\x01")
+        receipt.write(b"\x1bd\x03\x1dVB\x00")
 
 
 def main():
