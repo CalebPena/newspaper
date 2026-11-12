@@ -106,8 +106,7 @@ class TableColumn(Model):
 Cell = Annotated[str, Field(max_length=1000)] | int | Annotated[float, Field(allow_inf_nan=False)] | None
 
 
-class Table(Model):
-    type: Literal["table"]
+class BoxScore(Model):
     title: ShortText | None = None
     columns: list[TableColumn | ShortText] = Field(min_length=1, max_length=6)
     rows: list[list[Cell]] = Field(min_length=1, max_length=100)
@@ -123,6 +122,10 @@ class Table(Model):
         return self
 
 
+class Table(BoxScore):
+    type: Literal["table"]
+
+
 class ScoreTeam(Model):
     name: str = Field(min_length=1, max_length=100)
     score: int | None = Field(default=None, ge=0, le=999)
@@ -135,6 +138,7 @@ class ScoreGame(Model):
     away: ScoreTeam
     home: ScoreTeam
     note: ShortText | None = None
+    boxScores: list[BoxScore] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="after")
     def final_scores(self):
@@ -247,13 +251,16 @@ class Document(Model):
     def table_layout(self):
         def visit(components):
             for component in components:
-                if isinstance(component, Table):
+                if isinstance(component, BoxScore):
                     weights = [column.width if isinstance(column, TableColumn) else 1 for column in component.columns]
                     edges = [round(528 * sum(weights[:index]) / sum(weights)) for index in range(len(weights) + 1)]
                     if any(edges[index + 1] - edges[index] - 12 < 2 * self.theme.smallSize for index in range(len(weights))):
                         raise ValueError("Table columns are too narrow for theme.smallSize")
                 elif isinstance(component, Article):
                     visit(component.components)
+                elif isinstance(component, SportsScores):
+                    for game in component.games:
+                        visit(game.boxScores)
 
         visit(self.components)
         return self

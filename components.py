@@ -209,6 +209,8 @@ class NewspaperRenderer:
             ))
             if game.get("note"):
                 self.text(game["note"], size=self.theme["smallSize"])
+            for box_score in game.get("boxScores", []):
+                self.table(box_score)
 
     def qr(self, config):
         code = qrcode.QRCode(border=4, box_size=1)
