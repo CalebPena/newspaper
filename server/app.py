@@ -15,7 +15,7 @@ from starlette.routing import Mount
 from werkzeug.exceptions import HTTPException
 
 from server.database import Base, connect_database
-from server.schema import ClaimUpdate, CreateEdition, Heartbeat
+from server.schema import ClaimUpdate, CreateEdition, Heartbeat, ImmediateEdition
 from server.service import NewspaperService, ServiceError
 from server.storage import ImageStorage
 
@@ -88,6 +88,10 @@ def create_app():
     def create_edition_route():
         return jsonify(service.create(request.get_json())), 201
 
+    @api.post("/editions/asap")
+    def print_asap_route():
+        return jsonify(service.create(request.get_json(), asap=True)), 201
+
     @api.get("/editions")
     def list_editions_route():
         return jsonify(editions=service.list_editions(int(request.args.get("limit", "20"))))
@@ -127,6 +131,7 @@ def create_app():
     mcp = MCPServer("Morning Newspaper", instructions=(
         "Create individual newspaper print jobs, not recurring schedules. First read get_document_schema. "
         "Use ISO 8601 times with explicit UTC offsets. Reuse the same idempotencyKey when retrying a creation. "
+        "Use print_asap to make a new edition eligible for the printer's next poll without specifying a time. "
         "Upload images first and reference assetId, never local paths. A completed job means the Pi reported "
         "sending it to the printer, not independently confirmed physical output. Never automatically retry uncertain jobs."
     ))
@@ -140,6 +145,11 @@ def create_app():
     def create_edition(edition: CreateEdition) -> dict:
         """Schedule an immutable edition. printAt needs a timezone offset; expiresAt sets the late-print cutoff."""
         return service.create(edition.model_dump(mode="json", by_alias=True, exclude_none=True))
+
+    @mcp.tool()
+    def print_asap(edition: ImmediateEdition) -> dict:
+        """Queue a new edition for the Pi's next poll (normally within one minute). No printAt needed. Retries with the same idempotencyKey do not print twice."""
+        return service.create(edition.model_dump(mode="json", by_alias=True, exclude_none=True), asap=True)
 
     @mcp.tool()
     def list_editions(limit: int = 20) -> list[dict]:

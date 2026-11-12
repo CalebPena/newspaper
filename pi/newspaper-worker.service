@@ -1,0 +1,30 @@
+[Unit]
+Description=Scheduled newspaper print worker
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=diesel
+Group=diesel
+SupplementaryGroups=lp
+WorkingDirectory=/home/diesel/newspaper-worker
+EnvironmentFile=/etc/newspaper-worker.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/diesel/newspaper-worker/.venv/bin/python /home/diesel/newspaper-worker/worker.py
+Restart=always
+RestartSec=15
+TimeoutStopSec=180
+StateDirectory=newspaper
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

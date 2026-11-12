@@ -7,7 +7,7 @@ from uuid import uuid4
 from sqlalchemy import select
 
 from server.database import Asset, Edition, Printer, now
-from server.schema import CreateEdition, Document, asset_ids
+from server.schema import CreateEdition, Document, ImmediateEdition, asset_ids
 
 
 class ServiceError(Exception):
@@ -70,10 +70,11 @@ class NewspaperService:
             result["document"] = edition.document
         return result
 
-    def create(self, payload):
-        request = CreateEdition.model_validate(payload)
+    def create(self, payload, asap=False):
+        request = (ImmediateEdition if asap else CreateEdition).model_validate(payload)
         normalized = request.model_dump(mode="json", by_alias=True, exclude_none=True)
-        digest = hashlib.sha256(json.dumps(normalized, sort_keys=True).encode()).hexdigest()
+        identity = normalized | {"printAt": "ASAP"} if asap else normalized
+        digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         with self.sessions.begin() as session:
             self.printer_lock(session)
             existing = session.scalar(select(Edition).where(Edition.idempotency_key == request.idempotencyKey))
@@ -89,7 +90,7 @@ class NewspaperService:
             edition = Edition(
                 id=uuid4().hex, printer_id=self.printer_id,
                 idempotency_key=request.idempotencyKey, request_hash=digest,
-                document=normalized["document"], print_at=request.printAt.astimezone(UTC),
+                document=normalized["document"], print_at=now() if asap else request.printAt.astimezone(UTC),
                 expires_at=request.expiresAt.astimezone(UTC) if request.expiresAt else None,
                 status="scheduled",
             )

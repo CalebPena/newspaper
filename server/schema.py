@@ -212,11 +212,14 @@ class Document(Model):
         return value
 
 
-class CreateEdition(Model):
+class ImmediateEdition(Model):
     document: Document
-    printAt: AwareDatetime
     expiresAt: AwareDatetime | None = None
     idempotencyKey: str = Field(min_length=1, max_length=128)
+
+
+class CreateEdition(ImmediateEdition):
+    printAt: AwareDatetime
 
     @model_validator(mode="after")
     def expiry_after_print(self):
