@@ -197,7 +197,7 @@ def send_receipt(device, receipt):
                 write(chunk)
                 remaining_bytes -= len(chunk)
         drain()
-        time.sleep(2)
+        time.sleep(0.5)
         write(feed_and_cut)
         drain()
     finally:

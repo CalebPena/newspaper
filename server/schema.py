@@ -108,17 +108,16 @@ Cell = Annotated[str, Field(max_length=1000)] | int | Annotated[float, Field(all
 
 class BoxScore(Model):
     title: ShortText | None = None
-    columns: list[TableColumn | ShortText] = Field(min_length=1, max_length=6)
+    columns: list[TableColumn | ShortText] = Field(min_length=1, max_length=16)
     rows: list[list[Cell]] = Field(min_length=1, max_length=100)
     caption: ShortText | None = None
+    compact: bool = False
+    verticalLines: bool = False
 
     @model_validator(mode="after")
     def matching_rows(self):
         if any(len(row) != len(self.columns) for row in self.rows):
             raise ValueError("Each table row must match the number of columns")
-        weights = [column.width if isinstance(column, TableColumn) else 1 for column in self.columns]
-        if any(528 * weight / sum(weights) < 52 for weight in weights):
-            raise ValueError("Table columns are too narrow; use more balanced widths")
         return self
 
 
@@ -254,8 +253,10 @@ class Document(Model):
                 if isinstance(component, BoxScore):
                     weights = [column.width if isinstance(column, TableColumn) else 1 for column in component.columns]
                     edges = [round(528 * sum(weights[:index]) / sum(weights)) for index in range(len(weights) + 1)]
-                    if any(edges[index + 1] - edges[index] - 12 < 2 * self.theme.smallSize for index in range(len(weights))):
-                        raise ValueError("Table columns are too narrow for theme.smallSize")
+                    padding = 2 if component.compact else 6
+                    size = min(16, self.theme.smallSize) if component.compact else self.theme.smallSize
+                    if any(edges[index + 1] - edges[index] - 2 * padding < 2 * size for index in range(len(weights))):
+                        raise ValueError("Table columns are too narrow; enable compact or use fewer/better-balanced columns")
                 elif isinstance(component, Article):
                     visit(component.components)
                 elif isinstance(component, SportsScores):

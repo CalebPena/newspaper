@@ -139,16 +139,17 @@ class NewspaperRenderer:
         if config.get("caption"):
             self.text(config["caption"], size=self.theme["smallSize"])
 
-    def table_image(self, columns, rows, header=True, bold_rows=()):
+    def table_image(self, columns, rows, header=True, bold_rows=(), compact=False, vertical_lines=False):
         columns = [{"label": column} if isinstance(column, str) else column for column in columns]
-        if not 1 <= len(columns) <= 6:
-            raise ValueError("Tables need between one and six columns")
+        if not 1 <= len(columns) <= 16:
+            raise ValueError("Tables need between one and sixteen columns")
         available = self.width - 2 * self.margin
         weights = [column.get("width", 1) for column in columns]
         if any(weight <= 0 for weight in weights):
             raise ValueError("Column widths must be positive relative weights")
         edges = [round(available * sum(weights[:index]) / sum(weights)) for index in range(len(columns) + 1)]
-        padding = 6
+        padding = 2 if compact else 6
+        size = min(16, self.theme["smallSize"]) if compact else self.theme["smallSize"]
         parts = []
 
         def row_image(cells, bold=False):
@@ -158,7 +159,7 @@ class NewspaperRenderer:
                 self.text_image(
                     "—" if value is None else str(value),
                     edges[index + 1] - edges[index] - 2 * padding,
-                    size=self.theme["smallSize"], bold=bold,
+                    size=size, bold=bold,
                     align=columns[index].get("align", "left"),
                 )
                 for index, value in enumerate(cells)
@@ -178,12 +179,21 @@ class NewspaperRenderer:
         for part in parts:
             image.paste(part, (0, top))
             top += part.height
+        if vertical_lines:
+            draw = ImageDraw.Draw(image)
+            draw.line((0, 0, available - 1, 0), fill=0)
+            for edge in edges:
+                x = min(edge, available - 1)
+                draw.line((x, 0, x, image.height - 1), fill=0)
         return image
 
     def table(self, config):
         if config.get("title"):
             self.text(config["title"], size=self.theme["headingSize"], bold=True)
-        self.add(self.table_image(config["columns"], config["rows"]))
+        self.add(self.table_image(
+            config["columns"], config["rows"],
+            compact=config.get("compact", False), vertical_lines=config.get("verticalLines", False),
+        ))
         if config.get("caption"):
             self.text(config["caption"], size=self.theme["smallSize"])
 
